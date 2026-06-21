@@ -17,6 +17,21 @@ package com.http4j;
  */
 public class Http4jConfig {
 
+    private static volatile Http4jConfig defaultConfig = new Http4jConfig();
+
+    public Http4jConfig() {
+        this.jsonParser = com.http4j.internal.JsonParsers.detect();
+    }
+
+    public static Http4jConfig getDefaultConfig() {
+        return defaultConfig;
+    }
+
+    public static void setDefaultConfig(Http4jConfig cfg) {
+        if (cfg == null) throw new IllegalArgumentException("default config must not be null");
+        defaultConfig = cfg;
+    }
+
     private ResultObserver defaultObserver;
     private ResultRule defaultRule;
     private JsonParser jsonParser;

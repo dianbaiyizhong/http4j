@@ -187,7 +187,6 @@ public class Http4jTest {
         Http4j http4j = new Http4j(cfg);
 
         Http4jRequest req = http4j.request("http://localhost:9999/r")
-                .overrideGlobalRule()
                 .rule(new ResultRule() {
                     @Override
                     public boolean isBusinessSuccess(String body) {

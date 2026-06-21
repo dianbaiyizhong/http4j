@@ -32,8 +32,6 @@ public class Http4jRequest {
     private JsonParser jsonParser;
     private int connectTimeout;
     private int readTimeout;
-    private boolean useGlobalRule = true;
-
     Http4jRequest(String url, Http4jConfig config) {
         this.url = url;
         this.connectTimeout = config.getConnectTimeout();
@@ -140,56 +138,14 @@ public class Http4jRequest {
     }
 
     /**
-     * Set a per-request business rule.
-     * <p>
-     * By default the rule <strong>wraps</strong> the global default rule
-     * (the global rule acts as a pre-filter). Call {@link #overrideGlobalRule()}
-     * before this method to replace the global rule entirely.
-     *
-     * @see #overrideGlobalRule()
+     * Set a per-request business rule, replacing the global default rule
+     * set via {@link Http4jConfig#setDefaultRule(ResultRule)}.
      */
     public Http4jRequest rule(ResultRule rule) {
         if (rule == null) {
             return this;
         }
-        if (useGlobalRule && this.rule != null) {
-            // composite: global first, then local
-            final ResultRule global = this.rule;
-            final ResultRule local = rule;
-            this.rule = new ResultRule() {
-                @Override
-                public boolean isBusinessSuccess(String body) {
-                    return global.isBusinessSuccess(body) && local.isBusinessSuccess(body);
-                }
-
-                @Override
-                public int getBusinessCode(String body) {
-                    return local.getBusinessCode(body);
-                }
-
-                @Override
-                public String getBusinessMessage(String body) {
-                    return local.getBusinessMessage(body);
-                }
-
-                @Override
-                public String getBusinessData(String body) {
-                    return local.getBusinessData(body);
-                }
-            };
-        } else {
-            this.rule = rule;
-        }
-        this.useGlobalRule = false;
-        return this;
-    }
-
-    /**
-     * When set before {@link #rule(ResultRule)}, the per-request rule
-     * <em>replaces</em> (rather than layers on top of) the global default rule.
-     */
-    public Http4jRequest overrideGlobalRule() {
-        this.useGlobalRule = false;
+        this.rule = rule;
         return this;
     }
 
@@ -263,7 +219,7 @@ public class Http4jRequest {
                     fireHttpFail(statusCode, "HTTP " + statusCode + ": " + body, null);
                 }
 
-                return body;
+                return rule != null ? rule.getBusinessData(body) : body;
 
             } catch (Exception e) {
                 int code = 0;
@@ -301,11 +257,11 @@ public class Http4jRequest {
      * @throws IllegalStateException if no {@link JsonParser} is configured
      */
     public <T> T executeForData(Class<T> clazz) {
-        if (jsonParser == null) {
-            throw new IllegalStateException(
-                "No JsonParser configured. Set one via Http4jConfig.setJsonParser().");
+        String body = executeForData();
+        if (jsonParser != null) {
+            return jsonParser.parse(body, clazz);
         }
-        return jsonParser.parse(executeForData(), clazz);
+        return null;
     }
 
     // ---- internal ----
@@ -313,9 +269,9 @@ public class Http4jRequest {
         if (rule == null) {
             return;
         }
-        Http4j.currentContext().setBusinessData(rule.getBusinessData(body));
         if (rule.isBusinessSuccess(body)) {
             fireBusinessSuccess();
+            Http4j.currentContext().setBusinessData(rule.getBusinessData(body));
         } else {
             int code = rule.getBusinessCode(body);
             String msg = rule.getBusinessMessage(body);

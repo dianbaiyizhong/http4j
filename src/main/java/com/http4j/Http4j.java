@@ -34,7 +34,7 @@ public class Http4j {
      * Create an instance with default configuration.
      */
     public Http4j() {
-        this.config = new Http4jConfig();
+        this.config = Http4jConfig.getDefaultConfig();
     }
 
     /**
@@ -67,6 +67,21 @@ public class Http4j {
      */
     public Http4jConfig getConfig() {
         return config;
+    }
+
+    /**
+     * Set the global default configuration used by all {@code new Http4j()} instances
+     * that do not receive an explicit config.
+     */
+    public static void setDefaultConfig(Http4jConfig cfg) {
+        Http4jConfig.setDefaultConfig(cfg);
+    }
+
+    /**
+     * Returns the current global default configuration.
+     */
+    public static Http4jConfig getDefaultConfig() {
+        return Http4jConfig.getDefaultConfig();
     }
 
     /**

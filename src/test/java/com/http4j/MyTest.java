@@ -5,7 +5,10 @@ public class MyTest {
 
         Http4jConfig cfg = new Http4jConfig();
         cfg.setDefaultObserver(new MyResultObserver());
+        cfg.setDefaultRule(new MyRule());
         Http4j http4j = new Http4j(cfg);
+
+
 
         // Plain observer (no overrides) → wraps global
         MyResult myResult = http4j.request("http://localhost:5000/api/v1/ready")
