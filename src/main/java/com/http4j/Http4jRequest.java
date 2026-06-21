@@ -149,6 +149,26 @@ public class Http4jRequest {
     }
 
     /**
+     * Set the default observer for this request.
+     */
+    public Http4jRequest setDefaultObserver(ResultObserver observer) {
+        if (observer != null) {
+            this.observer = observer;
+        }
+        return this;
+    }
+
+    /**
+     * Set the default rule for this request.
+     */
+    public Http4jRequest setDefaultRule(ResultRule rule) {
+        if (rule != null) {
+            this.rule = rule;
+        }
+        return this;
+    }
+
+    /**
      * Override the connection timeout (milliseconds) for this request.
      */
     public Http4jRequest connectTimeout(int millis) {

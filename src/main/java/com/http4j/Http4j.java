@@ -50,23 +50,20 @@ public class Http4j {
     }
 
     /**
-     * Create a new HTTP request builder for the given URL.
-     * <p>
-     * The returned request will use this instance's configuration
-     * (timeouts, default observer/rule, etc.).
-     *
-     * @param url the target URL (http or https)
-     * @return a new {@link Http4jRequest} instance
-     */
-    public Http4jRequest request(String url) {
-        return new Http4jRequest(url, this.config);
-    }
-
-    /**
      * Returns the configuration used by this instance.
      */
     public Http4jConfig getConfig() {
         return config;
+    }
+
+    /**
+     * Create a new HTTP request builder using the global default configuration.
+     *
+     * @param url the target URL (http or https)
+     * @return a new {@link Http4jRequest} instance
+     */
+    public static Http4jRequest request(String url) {
+        return new Http4jRequest(url, getDefaultConfig());
     }
 
     /**
