@@ -151,7 +151,7 @@ public class Http4jRequest {
     /**
      * Set the default observer for this request.
      */
-    public Http4jRequest setDefaultObserver(ResultObserver observer) {
+    public Http4jRequest setObserver(ResultObserver observer) {
         if (observer != null) {
             this.observer = observer;
         }
@@ -161,7 +161,7 @@ public class Http4jRequest {
     /**
      * Set the default rule for this request.
      */
-    public Http4jRequest setDefaultRule(ResultRule rule) {
+    public Http4jRequest setRule(ResultRule rule) {
         if (rule != null) {
             this.rule = rule;
         }

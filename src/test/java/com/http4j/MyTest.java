@@ -1,5 +1,7 @@
 package com.http4j;
 
+import com.alibaba.fastjson2.JSONObject;
+
 public class MyTest {
     public static void main(String[] args) {
 
@@ -10,12 +12,19 @@ public class MyTest {
 
 
         MyResult myResult = Http4j.request("http://localhost:5000/api/v1/ready")
-                .setDefaultRule(new MyRule())
+                .setRule(new MyRule())
+                .setObserver(new MyResultObserver())
+                .rule(new ResultRule() {
+                    @Override
+                    public boolean isBusinessSuccess(String body) {
+                        return true;
+                    }
+                })
                 .observe(new MyResultObserver() {
-//                    @Override
-//                    public void callHttpStart() {
-//                        System.out.println("========");
-//                    }
+                    @Override
+                    public void callHttpStart() {
+                        System.out.println("========");
+                    }
                 })
                 .execute(MyResult.class);
 
