@@ -10,7 +10,6 @@ public class MyTest {
 
 
 
-        // Plain observer (no overrides) → wraps global
         MyResult myResult = http4j.request("http://localhost:5000/api/v1/ready")
                 .observe(new MyResultObserver() {
                     @Override
@@ -18,7 +17,7 @@ public class MyTest {
                         System.out.println("========");
                     }
                 })
-                .executeForData(MyResult.class);
+                .execute(MyResult.class);
 
 
 

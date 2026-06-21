@@ -1,13 +1,12 @@
 package com.http4j;
 
 import java.io.*;
-import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import com.http4j.JsonParser;
+
 import com.http4j.internal.ResultObserverHelper;
 
 /**
@@ -172,7 +171,7 @@ public class Http4jRequest {
      * <p>
      * Fires the observer lifecycle and evaluates the business rule internally.
      */
-    public String executeForData() {
+    public String execute() {
         Http4jContext ctx = new Http4jContext();
         ctx.setUrl(url);
         ctx.setMethod(method);
@@ -249,15 +248,15 @@ public class Http4jRequest {
      * Requires a {@link JsonParser} to be configured via {@link Http4jConfig#setJsonParser(JsonParser)}.
      * <p>
      * Fires the observer lifecycle and evaluates the business rule internally, same as
-     * {@link #executeForData()}.
+     * {@link #execute()}.
      *
      * @param clazz the target class for deserialization
      * @param <T>   the target type
      * @return the deserialized response object, or {@code null} if the body is empty
      * @throws IllegalStateException if no {@link JsonParser} is configured
      */
-    public <T> T executeForData(Class<T> clazz) {
-        String body = executeForData();
+    public <T> T execute(Class<T> clazz) {
+        String body = execute();
         if (jsonParser != null) {
             return jsonParser.parse(body, clazz);
         }

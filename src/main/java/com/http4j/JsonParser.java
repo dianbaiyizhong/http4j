@@ -31,7 +31,7 @@ public interface JsonParser {
     /**
      * Parse a JSON string into an instance of the specified class.
      * <p>
-     * Used by {@link Http4jRequest#executeForData(Class)} to deserialize
+     * Used by {@link Http4jRequest#execute(Class)} to deserialize
      * HTTP response bodies directly into business objects.
      * <p>
      * Implementation examples:

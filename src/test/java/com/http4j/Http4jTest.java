@@ -2,8 +2,6 @@ package com.http4j;
 
 import org.junit.Test;
 
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.*;
 
 import static org.junit.Assert.*;
@@ -66,7 +64,7 @@ public class Http4jTest {
                         System.out.println("========");
                     }
                 })
-                .executeForData();
+                .execute();
 
         System.out.println(s);
         // callHttpStart fires before the connection attempt, so it should be recorded
@@ -111,7 +109,7 @@ public class Http4jTest {
                         events.add("local");
                     }
                 })
-                .executeForData();
+                .execute();
 
         assertEquals(Collections.singletonList("local"), events);
     }
@@ -253,7 +251,7 @@ public class Http4jTest {
                         caught.add(throwable);
                     }
                 })
-                .executeForData();
+                .execute();
 
         assertTrue(events.get(0).equals("start"));
         assertTrue(events.get(1).startsWith("httpFail:"));
