@@ -6,6 +6,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import javax.net.ssl.*;
 
 import com.http4j.internal.ResultObserverHelper;
 
@@ -22,7 +23,9 @@ import com.http4j.internal.ResultObserverHelper;
  */
 public class Http4jRequest {
 
-    private final String url;
+    private String url;
+    private final String originalUrl;
+    private boolean ignoreSsl;
     private String method = "GET";
     private final Map<String, String> headers = new HashMap<>();
     private String requestBody;
@@ -31,13 +34,26 @@ public class Http4jRequest {
     private JsonParser jsonParser;
     private int connectTimeout;
     private int readTimeout;
+
     Http4jRequest(String url, Http4jConfig config) {
-        this.url = url;
+        this.originalUrl = url;
+        this.url = resolveUrl(url, config.getBaseUrl());
+        this.ignoreSsl = config.isIgnoreSsl();
         this.connectTimeout = config.getConnectTimeout();
         this.readTimeout = config.getReadTimeout();
         this.observer = config.getDefaultObserver();
         this.rule = config.getDefaultRule();
         this.jsonParser = config.getJsonParser();
+    }
+
+    private static String resolveUrl(String url, String baseUrl) {
+        if (baseUrl != null && !baseUrl.isEmpty()
+                && !url.startsWith("http://") && !url.startsWith("https://")) {
+            String base = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+            String path = url.startsWith("/") ? url.substring(1) : url;
+            return base + path;
+        }
+        return url;
     }
 
     // ---- builder methods ----
@@ -161,6 +177,21 @@ public class Http4jRequest {
     /**
      * Set the default rule for this request.
      */
+    public Http4jRequest setBaseUrl(String baseUrl) {
+        if (baseUrl != null) {
+            this.url = resolveUrl(this.originalUrl, baseUrl);
+        }
+        return this;
+    }
+
+    /**
+     * Whether to ignore SSL certificate errors for this request.
+     */
+    public Http4jRequest setIgnoreSsl(boolean ignoreSsl) {
+        this.ignoreSsl = ignoreSsl;
+        return this;
+    }
+
     public Http4jRequest setRule(ResultRule rule) {
         if (rule != null) {
             this.rule = rule;
@@ -206,6 +237,9 @@ public class Http4jRequest {
             try {
                 URL dest = new URL(url);
                 conn = (HttpURLConnection) dest.openConnection();
+                if (ignoreSsl && conn instanceof HttpsURLConnection) {
+                    applyIgnoreSsl((HttpsURLConnection) conn);
+                }
                 conn.setRequestMethod(method);
                 conn.setConnectTimeout(connectTimeout);
                 conn.setReadTimeout(readTimeout);
@@ -356,6 +390,30 @@ public class Http4jRequest {
             return clazz.getMethod(methodName, paramTypes).getDeclaringClass() != ResultObserver.class;
         } catch (NoSuchMethodException e) {
             return false;
+        }
+    }
+
+    private void applyIgnoreSsl(HttpsURLConnection conn) {
+        try {
+            TrustManager[] trustAllCerts = new TrustManager[]{
+                    new X509TrustManager() {
+                        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                            return null;
+                        }
+
+                        public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+                        }
+
+                        public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+                        }
+                    }
+            };
+            SSLContext sc = SSLContext.getInstance("TLS");
+            sc.init(null, trustAllCerts, new java.security.SecureRandom());
+            conn.setSSLSocketFactory(sc.getSocketFactory());
+            conn.setHostnameVerifier((hostname, session) -> true);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to configure SSL", e);
         }
     }
 }

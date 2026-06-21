@@ -37,6 +37,8 @@ public class Http4jConfig {
     private JsonParser jsonParser;
     private int connectTimeout = 5000;
     private int readTimeout = 5000;
+    private String baseUrl;
+    private boolean ignoreSsl;
 
     /** Observer applied to every request that does not supply its own. */
     public ResultObserver getDefaultObserver() {
@@ -72,6 +74,24 @@ public class Http4jConfig {
 
     public void setReadTimeout(int readTimeout) {
         this.readTimeout = readTimeout;
+    }
+
+    /** Base URL prepended to relative request paths. */
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+
+    public void setBaseUrl(String baseUrl) {
+        this.baseUrl = baseUrl;
+    }
+
+    /** Whether to ignore SSL certificate errors. */
+    public boolean isIgnoreSsl() {
+        return ignoreSsl;
+    }
+
+    public void setIgnoreSsl(boolean ignoreSsl) {
+        this.ignoreSsl = ignoreSsl;
     }
     /** JSON parser used to extract business code/message from response bodies. */
     public JsonParser getJsonParser() {
