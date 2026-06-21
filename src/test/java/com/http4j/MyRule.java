@@ -11,12 +11,12 @@ public class MyRule implements ResultRule {
     @Override
     public boolean isBusinessSuccess(String body) {
         jsonObject = JSON.parseObject(body);
-        return jsonObject.getBoolean("ready");
+        return jsonObject.getInteger("code") == 0;
     }
 
 
     @Override
     public String getBusinessData(String body) {
-        return jsonObject.getString("dependencies");
+        return jsonObject.getString("data");
     }
 }

@@ -360,6 +360,8 @@ public class Http4jRequest {
     private void fireHttpFail(int code, String message, Throwable throwable) {
         if (observer != null) {
             observer.callHttpFail(code, message, throwable);
+        } else {
+            throw new RuntimeException(throwable);
         }
     }
 

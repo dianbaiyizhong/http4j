@@ -8,26 +8,13 @@ public class MyTest {
         Http4jConfig cfg = new Http4jConfig();
         cfg.setDefaultObserver(new MyResultObserver());
         cfg.setDefaultRule(new MyRule());
-        Http4jConfig.setDefaultConfig(cfg);
+        cfg.setBaseUrl("http://localhost:8000");
+//        Http4jConfig.setDefaultConfig(cfg);
 
 
-        MyResult myResult = Http4j.request("http://localhost:5000/api/v1/ready")
-                .setRule(new MyRule())
-                .setObserver(new MyResultObserver())
-                .rule(new ResultRule() {
-                    @Override
-                    public boolean isBusinessSuccess(String body) {
-                        return true;
-                    }
-                })
-                .observe(new MyResultObserver() {
-                    @Override
-                    public void callHttpStart() {
-                        System.out.println("========");
-                    }
-                })
-                .execute(MyResult.class);
-
+        String myResult = Http4j.request("/api/users")
+                .setBaseUrl("http://localhost:8000")
+                .execute();
 
         System.out.println(myResult);
     }
