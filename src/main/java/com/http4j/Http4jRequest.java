@@ -32,13 +32,12 @@ public class Http4jRequest {
     private int readTimeout;
     private boolean useGlobalRule = true;
 
-    Http4jRequest(String url) {
+    Http4jRequest(String url, Http4jConfig config) {
         this.url = url;
-        Http4jConfig cfg = Http4j.getGlobalConfig();
-        this.connectTimeout = cfg.getConnectTimeout();
-        this.readTimeout = cfg.getReadTimeout();
-        this.observer = cfg.getDefaultObserver();
-        this.rule = cfg.getDefaultRule();
+        this.connectTimeout = config.getConnectTimeout();
+        this.readTimeout = config.getReadTimeout();
+        this.observer = config.getDefaultObserver();
+        this.rule = config.getDefaultRule();
     }
 
     // ---- builder methods ----

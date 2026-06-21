@@ -1,7 +1,6 @@
 package com.http4j;
 
 import com.http4j.internal.JsonUtil;
-import org.junit.After;
 import org.junit.Test;
 
 import java.net.HttpURLConnection;
@@ -14,11 +13,6 @@ import static org.junit.Assert.*;
  * Unit tests for the http4j SDK — no network or server sockets required.
  */
 public class Http4jTest {
-
-    @After
-    public void tearDown() {
-        Http4j.setGlobalConfig(new Http4jConfig());
-    }
 
     // ==============================================================
     // JsonUtil tests
@@ -120,10 +114,10 @@ public class Http4jTest {
                 events.add("global");
             }
         });
-        Http4j.setGlobalConfig(cfg);
+        Http4j http4j = new Http4j(cfg);
 
         // Plain observer (no overrides) → wraps global
-        Http4j.request("http://localhost:9999/wrap")
+        http4j.request("http://localhost:9999/wrap")
                 .observe(new ResultObserver() {
                 })
                 .executeForData();
@@ -139,35 +133,18 @@ public class Http4jTest {
         Http4jConfig cfg = new Http4jConfig();
         cfg.setDefaultObserver(new ResultObserver() {
             @Override
-            public void callHttpStart() {
-                events.add("global");
-            }
-
-            @Override
-            public void callHttpFail(int statusCode, String message, Throwable throwable) {
-                System.out.println(throwable);
-                throwable.printStackTrace();
-
-            }
+            public void callHttpStart() { events.add("global"); }
         });
-        Http4j.setGlobalConfig(cfg);
+        Http4j http4j = new Http4j(cfg);
 
-        // Local observer with overrides → chains: global first, then local
-        Http4j.request("http://localhost:9999/chain")
+        // Local observer overrides callHttpStart → global does NOT fire for that method
+        http4j.request("http://localhost:9999/chain")
                 .observe(new ResultObserver() {
                     @Override
-                    public void callHttpStart() {
-                        events.add("local");
-                    }
-
-                    @Override
-                    public void callHttpFail(int statusCode, String message, Throwable throwable) {
-                        System.out.println("www");
-                    }
+                    public void callHttpStart() { events.add("local"); }
                 })
                 .executeForData();
 
-        // Local overrides callHttpStart → global does NOT fire for that method
         assertEquals(Collections.singletonList("local"), events);
     }
 
@@ -181,10 +158,10 @@ public class Http4jTest {
                 events.add("global");
             }
         });
-        Http4j.setGlobalConfig(cfg);
+        Http4j http4j = new Http4j(cfg);
 
         // Null observer should not affect the request
-        Http4jRequest req = Http4j.request("http://localhost:9999/null")
+        Http4jRequest req = http4j.request("http://localhost:9999/null")
                 .observe(null);
         assertNotNull(req);
     }
@@ -196,7 +173,7 @@ public class Http4jTest {
     @Test
     public void testBuilderSetsMethod() {
         // We can't test the HTTP call, but we verify the builder returns itself correctly
-        Http4jRequest req = Http4j.request("http://example.com")
+        Http4jRequest req = new Http4j().request("http://example.com")
                 .method("POST")
                 .header("Content-Type", "application/json")
                 .body("{\"test\":1}")
@@ -219,21 +196,15 @@ public class Http4jTest {
         Http4jConfig cfg = new Http4jConfig();
         cfg.setConnectTimeout(3000);
         cfg.setReadTimeout(7000);
-        cfg.setDefaultObserver(new ResultObserver() {
-        });
+        cfg.setDefaultObserver(new ResultObserver() {});
         cfg.setDefaultRule(new DefaultResultRule());
 
-        Http4j.setGlobalConfig(cfg);
-        Http4jConfig retrieved = Http4j.getGlobalConfig();
+        Http4j http4j = new Http4j(cfg);
+        Http4jConfig retrieved = http4j.getConfig();
         assertEquals(3000, retrieved.getConnectTimeout());
         assertEquals(7000, retrieved.getReadTimeout());
         assertNotNull(retrieved.getDefaultObserver());
         assertNotNull(retrieved.getDefaultRule());
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testSetNullGlobalConfigThrows() {
-        Http4j.setGlobalConfig(null);
     }
 
     // ==============================================================
@@ -244,9 +215,9 @@ public class Http4jTest {
     public void testOverrideGlobalRuleFlag() {
         Http4jConfig cfg = new Http4jConfig();
         cfg.setDefaultRule(new DefaultResultRule());
-        Http4j.setGlobalConfig(cfg);
+        Http4j http4j = new Http4j(cfg);
 
-        Http4jRequest req = Http4j.request("http://localhost:9999/r")
+        Http4jRequest req = http4j.request("http://localhost:9999/r")
                 .overrideGlobalRule()
                 .rule(new ResultRule() {
                     @Override
@@ -299,7 +270,7 @@ public class Http4jTest {
     public void testHttpFailForExceptionPassesCodeZeroAndThrowable() {
         List<String> events = new ArrayList<>();
         List<Throwable> caught = new ArrayList<>();
-        String body = Http4j.request("http://192.0.2.1:9999/nope")
+        String body = new Http4j().request("http://192.0.2.1:9999/nope")
                 .connectTimeout(500)
                 .readTimeout(500)
                 .observe(new ResultObserver() {
@@ -330,6 +301,6 @@ public class Http4jTest {
         // We use the JDK's simple Exchange pattern — but since binding is blocked,
         // we skip this test and just verify the result is sensible.
         // This is a placeholder — real integration tests run on a network-permitted env.
-        assertNotNull(Http4j.request("http://example.com"));
+        assertNotNull(new Http4j().request("http://example.com"));
     }
 }
