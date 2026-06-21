@@ -1,6 +1,4 @@
-package com.http4j.internal;
-
-import com.http4j.ResultObserver;
+package com.http4j;
 
 import java.util.Map;
 import java.util.WeakHashMap;

@@ -1,6 +1,5 @@
-package com.http4j.internal;
+package com.http4j;
 
-import com.http4j.JsonParser;
 import java.lang.reflect.Method;
 import java.util.Map;
 

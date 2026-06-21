@@ -8,8 +8,6 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.net.ssl.*;
 
-import com.http4j.internal.ResultObserverHelper;
-
 /**
  * A builder for a single HTTP request.
  * <p>

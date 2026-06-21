@@ -20,7 +20,7 @@ public class Http4jConfig {
     private static volatile Http4jConfig defaultConfig = new Http4jConfig();
 
     public Http4jConfig() {
-        this.jsonParser = com.http4j.internal.JsonParsers.detect();
+        this.jsonParser = JsonParsers.detect();
     }
 
     public static Http4jConfig getDefaultConfig() {

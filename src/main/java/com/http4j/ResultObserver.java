@@ -1,7 +1,5 @@
 package com.http4j;
 
-import com.http4j.internal.ResultObserverHelper;
-
 /**
  * Lifecycle observer for a single HTTP request.
  * <p>
