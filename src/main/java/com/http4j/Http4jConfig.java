@@ -19,6 +19,7 @@ public class Http4jConfig {
 
     private ResultObserver defaultObserver;
     private ResultRule defaultRule;
+    private JsonParser jsonParser;
     private int connectTimeout = 5000;
     private int readTimeout = 5000;
 
@@ -56,5 +57,13 @@ public class Http4jConfig {
 
     public void setReadTimeout(int readTimeout) {
         this.readTimeout = readTimeout;
+    }
+    /** JSON parser used to extract business code/message from response bodies. */
+    public JsonParser getJsonParser() {
+        return jsonParser;
+    }
+
+    public void setJsonParser(JsonParser jsonParser) {
+        this.jsonParser = jsonParser;
     }
 }

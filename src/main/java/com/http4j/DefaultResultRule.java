@@ -1,8 +1,7 @@
 package com.http4j;
 
-import com.http4j.internal.JsonUtil;
-
 import java.util.Map;
+import com.http4j.JsonParser;
 
 /**
  * Default business-rule implementation that interprets a JSON response body.
@@ -12,13 +11,21 @@ import java.util.Map;
  */
 public class DefaultResultRule implements ResultRule {
 
+    private final JsonParser parser;
+
+    public DefaultResultRule() {
+        this.parser = null;
+    }
+
+    public DefaultResultRule(JsonParser parser) {
+        this.parser = parser;
+    }
+
     @Override
     public boolean isBusinessSuccess(String body) {
-        if (body == null || body.isEmpty()) {
-            return false;
-        }
+        if (body == null || body.isEmpty() || parser == null) return false;
         try {
-            Object parsed = JsonUtil.parse(body);
+            Object parsed = parser.parse(body);
             if (parsed instanceof Map) {
                 Object code = ((Map<?, ?>) parsed).get("code");
                 if (code instanceof Number) {
@@ -33,11 +40,9 @@ public class DefaultResultRule implements ResultRule {
 
     @Override
     public int getBusinessCode(String body) {
-        if (body == null || body.isEmpty()) {
-            return -1;
-        }
+        if (body == null || body.isEmpty() || parser == null) return -1;
         try {
-            Object parsed = JsonUtil.parse(body);
+            Object parsed = parser.parse(body);
             if (parsed instanceof Map) {
                 Object code = ((Map<?, ?>) parsed).get("code");
                 if (code instanceof Number) {
@@ -51,11 +56,9 @@ public class DefaultResultRule implements ResultRule {
 
     @Override
     public String getBusinessMessage(String body) {
-        if (body == null || body.isEmpty()) {
-            return "";
-        }
+        if (body == null || body.isEmpty() || parser == null) return "";
         try {
-            Object parsed = JsonUtil.parse(body);
+            Object parsed = parser.parse(body);
             if (parsed instanceof Map) {
                 Object msg = ((Map<?, ?>) parsed).get("message");
                 if (msg != null) {
@@ -65,5 +68,10 @@ public class DefaultResultRule implements ResultRule {
         } catch (Exception ignored) {
         }
         return "";
+    }
+
+    @Override
+    public String getBusinessData(String body) {
+        return body;
     }
 }

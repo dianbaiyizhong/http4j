@@ -28,6 +28,7 @@ public final class Http4jContext {
     private String requestBody;
     private int statusCode = -1;
     private String responseBody;
+    private String businessData;
 
     /** Package-private constructor — created by the library. */
     Http4jContext() {
@@ -41,6 +42,7 @@ public final class Http4jContext {
     void setRequestBody(String requestBody) { this.requestBody = requestBody; }
     void setStatusCode(int statusCode) { this.statusCode = statusCode; }
     void setResponseBody(String responseBody) { this.responseBody = responseBody; }
+    void setBusinessData(String businessData) { this.businessData = businessData; }
 
     // ---- getters (public) ----
 
@@ -63,6 +65,7 @@ public final class Http4jContext {
     public int getStatusCode() { return statusCode; }
 
     /** Response body, or {@code null} if not yet available. */
+    public String getBusinessData() { return businessData; }
     public String getResponseBody() { return responseBody; }
 
     @Override

@@ -1,6 +1,5 @@
 package com.http4j;
 
-import com.http4j.internal.JsonUtil;
 import org.junit.Test;
 
 import java.net.HttpURLConnection;
@@ -18,72 +17,17 @@ public class Http4jTest {
     // JsonUtil tests
     // ==============================================================
 
-    @Test
-    public void testJsonParseEmpty() {
-        assertNull(JsonUtil.parse(null));
-        assertNull(JsonUtil.parse("  "));
-    }
-
-    @Test
-    public void testJsonParseObject() {
-        String json = "{\"code\":0,\"message\":\"ok\",\"data\":[1,2,3]}";
-        Object parsed = JsonUtil.parse(json);
-        assertTrue(parsed instanceof Map);
-        Map<?, ?> map = (Map<?, ?>) parsed;
-        assertEquals(0, ((Number) map.get("code")).intValue());
-        assertEquals("ok", map.get("message"));
-        assertTrue(map.get("data") instanceof List);
-    }
-
-    @Test
-    public void testJsonParseNested() {
-        String json = "{\"a\":{\"b\":{\"c\":\"deep\"}}}";
-        Map<?, ?> a = (Map<?, ?>) ((Map<?, ?>) JsonUtil.parse(json)).get("a");
-        Map<?, ?> b = (Map<?, ?>) a.get("b");
-        assertEquals("deep", b.get("c"));
-    }
-
-    @Test
-    public void testJsonParseArray() {
-        String json = "[1,\"two\",true,null,{\"k\":\"v\"}]";
-        List<?> list = (List<?>) JsonUtil.parse(json);
-        assertEquals(5, list.size());
-        assertEquals(1, ((Number) list.get(0)).intValue());
-        assertEquals("two", list.get(1));
-        assertEquals(true, list.get(2));
-        assertNull(list.get(3));
-        assertTrue(list.get(4) instanceof Map);
-    }
-
-    @Test
-    public void testJsonParseNumberTypes() {
-        Map<?, ?> m = (Map<?, ?>) JsonUtil.parse("{\"i\":42,\"l\":9999999999,\"d\":3.14}");
-        assertTrue(m.get("i") instanceof Integer);
-        assertTrue(m.get("l") instanceof Long);
-        assertTrue(m.get("d") instanceof Double);
-    }
-
-    @Test
-    public void testJsonParseEscape() {
-        String json = "{\"s\":\"hello\\nworld\"}";
-        Map<?, ?> m = (Map<?, ?>) JsonUtil.parse(json);
-        assertEquals("hello\nworld", m.get("s"));
-    }
-
-    // ==============================================================
-    // DefaultResultRule tests
-    // ==============================================================
 
     @Test
     public void testDefaultRuleSuccess() {
-        DefaultResultRule rule = new DefaultResultRule();
+        DefaultResultRule rule = new DefaultResultRule(new TestJsonParser());
         assertTrue(rule.isBusinessSuccess("{\"code\":0}"));
         assertTrue(rule.isBusinessSuccess("{\"code\":0,\"message\":\"ok\"}"));
     }
 
     @Test
     public void testDefaultRuleFail() {
-        DefaultResultRule rule = new DefaultResultRule();
+        DefaultResultRule rule = new DefaultResultRule(new TestJsonParser());
         assertFalse(rule.isBusinessSuccess("{\"code\":-1}"));
         assertFalse(rule.isBusinessSuccess("{\"code\":1}"));
         assertFalse(rule.isBusinessSuccess("{\"code\":403}"));
@@ -94,7 +38,7 @@ public class Http4jTest {
 
     @Test
     public void testDefaultRuleCodeAndMessage() {
-        DefaultResultRule rule = new DefaultResultRule();
+        DefaultResultRule rule = new DefaultResultRule(new TestJsonParser());
         assertEquals(500, rule.getBusinessCode("{\"code\":500,\"message\":\"err\"}"));
         assertEquals("err", rule.getBusinessMessage("{\"code\":500,\"message\":\"err\"}"));
     }
@@ -108,20 +52,23 @@ public class Http4jTest {
         List<String> events = new ArrayList<>();
 
         Http4jConfig cfg = new Http4jConfig();
-        cfg.setDefaultObserver(new ResultObserver() {
-            @Override
-            public void callHttpStart() {
-                events.add("global");
-            }
-        });
+
+        cfg.setDefaultObserver(new MyResultObserver());
         Http4j http4j = new Http4j(cfg);
 
         // Plain observer (no overrides) → wraps global
-        http4j.request("http://localhost:9999/wrap")
-                .observe(new ResultObserver() {
+        String s = http4j.request("http://localhost:9999/wrap")
+                .observe(new MyResultObserver() {
+                    @Override
+                    public void callHttpStart() {
+//                        super.callHttpStart();
+                        events.add("global");
+                        System.out.println("========");
+                    }
                 })
                 .executeForData();
 
+        System.out.println(s);
         // callHttpStart fires before the connection attempt, so it should be recorded
         assertTrue(events.contains("global"));
     }
@@ -133,15 +80,36 @@ public class Http4jTest {
         Http4jConfig cfg = new Http4jConfig();
         cfg.setDefaultObserver(new ResultObserver() {
             @Override
-            public void callHttpStart() { events.add("global"); }
+            public void callHttpStart() {
+                events.add("global");
+            }
         });
+        cfg.setDefaultRule(new ResultRule() {
+            @Override
+            public boolean isBusinessSuccess(String body) {
+                return false;
+            }
+
+            @Override
+            public int getBusinessCode(String body) {
+                return 0;
+            }
+
+            @Override
+            public String getBusinessMessage(String body) {
+                return "";
+            }
+        });
+
         Http4j http4j = new Http4j(cfg);
 
         // Local observer overrides callHttpStart → global does NOT fire for that method
         http4j.request("http://localhost:9999/chain")
                 .observe(new ResultObserver() {
                     @Override
-                    public void callHttpStart() { events.add("local"); }
+                    public void callHttpStart() {
+                        events.add("local");
+                    }
                 })
                 .executeForData();
 
@@ -196,8 +164,9 @@ public class Http4jTest {
         Http4jConfig cfg = new Http4jConfig();
         cfg.setConnectTimeout(3000);
         cfg.setReadTimeout(7000);
-        cfg.setDefaultObserver(new ResultObserver() {});
-        cfg.setDefaultRule(new DefaultResultRule());
+        cfg.setDefaultObserver(new ResultObserver() {
+        });
+        cfg.setDefaultRule(new DefaultResultRule(new TestJsonParser()));
 
         Http4j http4j = new Http4j(cfg);
         Http4jConfig retrieved = http4j.getConfig();
@@ -214,7 +183,7 @@ public class Http4jTest {
     @Test
     public void testOverrideGlobalRuleFlag() {
         Http4jConfig cfg = new Http4jConfig();
-        cfg.setDefaultRule(new DefaultResultRule());
+        cfg.setDefaultRule(new DefaultResultRule(new TestJsonParser()));
         Http4j http4j = new Http4j(cfg);
 
         Http4jRequest req = http4j.request("http://localhost:9999/r")

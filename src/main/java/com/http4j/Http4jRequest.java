@@ -7,6 +7,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import com.http4j.JsonParser;
 import com.http4j.internal.ResultObserverHelper;
 
 /**
@@ -28,6 +29,7 @@ public class Http4jRequest {
     private String requestBody;
     private ResultObserver observer;
     private ResultRule rule;
+    private JsonParser jsonParser;
     private int connectTimeout;
     private int readTimeout;
     private boolean useGlobalRule = true;
@@ -38,6 +40,7 @@ public class Http4jRequest {
         this.readTimeout = config.getReadTimeout();
         this.observer = config.getDefaultObserver();
         this.rule = config.getDefaultRule();
+        this.jsonParser = config.getJsonParser();
     }
 
     // ---- builder methods ----
@@ -168,6 +171,11 @@ public class Http4jRequest {
                 public String getBusinessMessage(String body) {
                     return local.getBusinessMessage(body);
                 }
+
+                @Override
+                public String getBusinessData(String body) {
+                    return local.getBusinessData(body);
+                }
             };
         } else {
             this.rule = rule;
@@ -279,11 +287,33 @@ public class Http4jRequest {
         }
     }
 
+    /**
+     * Execute the request and deserialize the response body into the specified type.
+     * <p>
+     * Requires a {@link JsonParser} to be configured via {@link Http4jConfig#setJsonParser(JsonParser)}.
+     * <p>
+     * Fires the observer lifecycle and evaluates the business rule internally, same as
+     * {@link #executeForData()}.
+     *
+     * @param clazz the target class for deserialization
+     * @param <T>   the target type
+     * @return the deserialized response object, or {@code null} if the body is empty
+     * @throws IllegalStateException if no {@link JsonParser} is configured
+     */
+    public <T> T executeForData(Class<T> clazz) {
+        if (jsonParser == null) {
+            throw new IllegalStateException(
+                "No JsonParser configured. Set one via Http4jConfig.setJsonParser().");
+        }
+        return jsonParser.parse(executeForData(), clazz);
+    }
+
     // ---- internal ----
     private void evaluateBusiness(String body) {
         if (rule == null) {
             return;
         }
+        Http4j.currentContext().setBusinessData(rule.getBusinessData(body));
         if (rule.isBusinessSuccess(body)) {
             fireBusinessSuccess();
         } else {
