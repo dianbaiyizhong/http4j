@@ -1,10 +1,21 @@
 package com.http4j;
 
+import com.http4j.internal.ResultObserverHelper;
+
 /**
- * Observer for the HTTP + business lifecycle of a request.
+ * Lifecycle observer for a single HTTP request.
  * <p>
- * Subclasses override whichever callbacks they need. The default implementations do nothing.
- * All callbacks are invoked synchronously during {@link Http4jRequest#executeForData()}.
+ * Implement (or use an anonymous class) to receive callbacks during request
+ * execution. Every method is a {@code default} no-op, so you only override the
+ * ones you care about.
+ * <p>
+ * Inside any callback you can access the full request context via
+ * {@link Http4j#currentContext()}:
+ * <pre>{@code
+ * Http4jContext ctx = Http4j.currentContext();
+ * String url = ctx.getUrl();
+ * String method = ctx.getMethod();
+ * }</pre>
  * <p>
  * <strong>Invocation order:</strong>
  * <ol>
@@ -17,22 +28,28 @@ package com.http4j;
  *       </ul>
  *   </li>
  * </ol>
+ * <p>
+ * <strong>Overriding vs inheriting the global default observer</strong>
+ * (set via {@link Http4jConfig#setDefaultObserver(ResultObserver)}):
+ * <ul>
+ *   <li>If you override a method → the global default does <em>not</em> run for that method.
+ *       (Use {@link #defaultObserver()} to invoke it explicitly.)</li>
+ *   <li>If you do not override a method → the global default runs.</li>
+ * </ul>
  *
  * @see Http4jConfig#setDefaultObserver(ResultObserver)
  * @see Http4jRequest#observe(ResultObserver)
+ * @see Http4j#currentContext()
+ * @see Http4jContext
  */
-public class ResultObserver {
+public interface ResultObserver {
 
-    /**
-     * Called immediately before the HTTP connection is opened.
-     */
-    public void callHttpStart() {
+    /** Called immediately before the HTTP connection is opened. */
+    default void callHttpStart() {
     }
 
-    /**
-     * Called after a successful HTTP response (any 2xx / 3xx status).
-     */
-    public void callHttpSuccess() {
+    /** Called after a successful HTTP response (any 2xx / 3xx status). */
+    default void callHttpSuccess() {
     }
 
     /**
@@ -43,14 +60,14 @@ public class ResultObserver {
      * @param throwable  the original exception, or {@code null} if the failure is an HTTP-level
      *                   error (non-2xx/3xx status) rather than a transport exception
      */
-    public void callHttpFail(int statusCode, String message, Throwable throwable) {
+    default void callHttpFail(int statusCode, String message, Throwable throwable) {
     }
 
     /**
      * Called when the HTTP response is received and the {@link ResultRule} judges it a
      * business success (e.g. JSON {@code code == 0}).
      */
-    public void callBusinessSuccess() {
+    default void callBusinessSuccess() {
     }
 
     /**
@@ -60,6 +77,22 @@ public class ResultObserver {
      * @param code    business error code from the response
      * @param message business error message from the response
      */
-    public void callBusinessFail(int code, String message) {
+    default void callBusinessFail(int code, String message) {
+    }
+
+    /**
+     * Access the global default observer, if one was configured via
+     * {@link Http4jConfig#setDefaultObserver(ResultObserver)}.
+     * <p>
+     * Call this from an overridden callback to explicitly invoke the global
+     * default behaviour:
+     * <pre>{@code
+     * ResultObserver.super.defaultObserver().callBusinessFail(code, msg);
+     * }</pre>
+     *
+     * @return the default observer, or {@code null} if none was set
+     */
+    default ResultObserver defaultObserver() {
+        return ResultObserverHelper.getParent(this);
     }
 }

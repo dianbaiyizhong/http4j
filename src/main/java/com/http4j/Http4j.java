@@ -8,16 +8,19 @@ package com.http4j;
  * String body = Http4j.request("https://api.example.com/data")
  *         .header("Authorization", "Bearer token123")
  *         .observe(new ResultObserver() {
- *             @Override
  *             public void callBusinessFail(int code, String messages) {
- *                 super.callBusinessFail(code, messages);
- *                 System.out.println("Business failed: code=" + code + " msg=" + messages);
+ *                 Http4jContext ctx = Http4j.currentContext();
+ *                 System.out.println("Business failed: code=" + code + " msg=" + messages
+ *                     + " url=" + ctx.getUrl());
  *             }
  *         })
  *         .executeForData();
  * }</pre>
  */
 public final class Http4j {
+
+    /** Thread-local request context, set before each callback invocation. */
+    static final ThreadLocal<Http4jContext> contextHolder = new ThreadLocal<>();
 
     private static volatile Http4jConfig globalConfig = new Http4jConfig();
 
@@ -53,5 +56,15 @@ public final class Http4j {
      */
     public static Http4jConfig getGlobalConfig() {
         return globalConfig;
+    }
+    /**
+     * Returns the {@link Http4jContext} for the current request thread,
+     * or {@code null} if called outside of an active request.
+     * <p>
+     * This is the primary way for {@link ResultObserver} implementations to
+     * access request details (URL, method, headers, etc.).
+     */
+    public static Http4jContext currentContext() {
+        return contextHolder.get();
     }
 }

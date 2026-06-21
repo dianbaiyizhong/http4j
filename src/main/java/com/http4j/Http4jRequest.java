@@ -1,11 +1,13 @@
 package com.http4j;
 
 import java.io.*;
+import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import com.http4j.internal.ResultObserverHelper;
 
 /**
  * A builder for a single HTTP request.
@@ -41,19 +43,25 @@ public class Http4jRequest {
 
     // ---- builder methods ----
 
-    /** Set the HTTP method (GET, POST, PUT, DELETE, etc.). Default is GET. */
+    /**
+     * Set the HTTP method (GET, POST, PUT, DELETE, etc.). Default is GET.
+     */
     public Http4jRequest method(String method) {
         this.method = method.toUpperCase();
         return this;
     }
 
-    /** Add a request header. */
+    /**
+     * Add a request header.
+     */
     public Http4jRequest header(String name, String value) {
         this.headers.put(name, value);
         return this;
     }
 
-    /** Set the request body (for POST/PUT etc.). */
+    /**
+     * Set the request body (for POST/PUT etc.).
+     */
     public Http4jRequest body(String body) {
         this.requestBody = body;
         return this;
@@ -62,49 +70,65 @@ public class Http4jRequest {
     /**
      * Attach a per-request observer.
      * <p>
-     * The given observer always <strong>chains on top of</strong> the global default observer
-     * set via {@link Http4jConfig#setDefaultObserver(ResultObserver)}:
-     * the global callback runs first, then the local callback.
+     * For each lifecycle callback the library checks whether the local observer
+     * overrides that method:
+     * <ul>
+     *   <li><strong>overridden</strong> → only the local callback runs
+     *       (the global default does <em>not</em> run automatically)</li>
+     *   <li><strong>not overridden</strong> → the global default callback runs</li>
+     * </ul>
      * <p>
-     * If no global observer has been set, the local observer is used directly.
+     * If you want to opt in to the global default behaviour inside an overridden
+     * method, call {@link #defaultObserver()} explicitly:
+     * <pre>{@code
+     * defaultObserver().callHttpFail(code, msg, ex);
+     * }</pre>
      */
     public Http4jRequest observe(ResultObserver observer) {
         if (observer == null) {
             return this;
         }
         if (this.observer != null) {
-            // chain: global → local
             final ResultObserver global = this.observer;
             final ResultObserver local = observer;
+
+            ResultObserverHelper.setParent(local, global);
+
+            boolean overriddenHttpStart = isOverridden(local, "callHttpStart");
+            boolean overriddenHttpSucc = isOverridden(local, "callHttpSuccess");
+            boolean overriddenHttpFail = isOverridden(local, "callHttpFail", int.class, String.class, Throwable.class);
+            boolean overriddenBizSucc = isOverridden(local, "callBusinessSuccess");
+            boolean overriddenBizFail = isOverridden(local, "callBusinessFail", int.class, String.class);
+
             this.observer = new ResultObserver() {
                 @Override
                 public void callHttpStart() {
-                    global.callHttpStart();
-                    local.callHttpStart();
+                    if (overriddenHttpStart) local.callHttpStart();
+                    else global.callHttpStart();
                 }
 
                 @Override
                 public void callHttpSuccess() {
-                    global.callHttpSuccess();
-                    local.callHttpSuccess();
+                    if (overriddenHttpSucc) local.callHttpSuccess();
+                    else global.callHttpSuccess();
                 }
 
                 @Override
                 public void callHttpFail(int statusCode, String message, Throwable throwable) {
-                    global.callHttpFail(statusCode, message, throwable);
-                    local.callHttpFail(statusCode, message, throwable);
+                    if (overriddenHttpFail) local.callHttpFail(statusCode, message, throwable);
+                    else global.callHttpFail(statusCode, message, throwable);
                 }
 
                 @Override
                 public void callBusinessSuccess() {
-                    global.callBusinessSuccess();
-                    local.callBusinessSuccess();
+                    if (overriddenBizSucc) local.callBusinessSuccess();
+                    else global.callBusinessSuccess();
                 }
 
                 @Override
                 public void callBusinessFail(int code, String message) {
-                    global.callBusinessFail(code, message);
-                    local.callBusinessFail(code, message);
+                    if (overriddenBizFail) local.callBusinessFail(code, message);
+                    else global.callBusinessFail(code, message);
                 }
             };
         } else {
@@ -162,13 +186,17 @@ public class Http4jRequest {
         return this;
     }
 
-    /** Override the connection timeout (milliseconds) for this request. */
+    /**
+     * Override the connection timeout (milliseconds) for this request.
+     */
     public Http4jRequest connectTimeout(int millis) {
         this.connectTimeout = millis;
         return this;
     }
 
-    /** Override the read timeout (milliseconds) for this request. */
+    /**
+     * Override the read timeout (milliseconds) for this request.
+     */
     public Http4jRequest readTimeout(int millis) {
         this.readTimeout = millis;
         return this;
@@ -182,62 +210,77 @@ public class Http4jRequest {
      * Fires the observer lifecycle and evaluates the business rule internally.
      */
     public String executeForData() {
-        fireHttpStart();
+        Http4jContext ctx = new Http4jContext();
+        ctx.setUrl(url);
+        ctx.setMethod(method);
+        ctx.setHeaders(headers);
+        ctx.setRequestBody(requestBody);
+        Http4j.contextHolder.set(ctx);
 
-        HttpURLConnection conn = null;
         try {
-            URL dest = new URL(url);
-            conn = (HttpURLConnection) dest.openConnection();
-            conn.setRequestMethod(method);
-            conn.setConnectTimeout(connectTimeout);
-            conn.setReadTimeout(readTimeout);
-            conn.setDoInput(true);
+            fireHttpStart();
 
-            // headers
-            for (Map.Entry<String, String> h : headers.entrySet()) {
-                conn.setRequestProperty(h.getKey(), h.getValue());
-            }
+            HttpURLConnection conn = null;
+            try {
+                URL dest = new URL(url);
+                conn = (HttpURLConnection) dest.openConnection();
+                conn.setRequestMethod(method);
+                conn.setConnectTimeout(connectTimeout);
+                conn.setReadTimeout(readTimeout);
+                conn.setDoInput(true);
 
-            // body
-            if (requestBody != null && !requestBody.isEmpty()) {
-                conn.setDoOutput(true);
-                try (OutputStream os = conn.getOutputStream()) {
-                    os.write(requestBody.getBytes(StandardCharsets.UTF_8));
+                // headers
+                for (Map.Entry<String, String> h : headers.entrySet()) {
+                    conn.setRequestProperty(h.getKey(), h.getValue());
                 }
-            }
 
-            int statusCode = conn.getResponseCode();
-            String body = readBody(conn, statusCode);
-
-            boolean httpOk = statusCode >= 200 && statusCode < 400;
-            if (httpOk) {
-                fireHttpSuccess();
-                evaluateBusiness(body);
-            } else {
-                fireHttpFail(statusCode, "HTTP " + statusCode + ": " + body, null);
-            }
-
-            return body;
-
-        } catch (Exception e) {
-            int code = 0;
-            if (conn != null) {
-                try {
-                    code = conn.getResponseCode();
-                } catch (Exception ignored) {
+                // body
+                if (requestBody != null && !requestBody.isEmpty()) {
+                    conn.setDoOutput(true);
+                    try (OutputStream os = conn.getOutputStream()) {
+                        os.write(requestBody.getBytes(StandardCharsets.UTF_8));
+                    }
                 }
+
+                int statusCode = conn.getResponseCode();
+                String body = readBody(conn, statusCode);
+
+                ctx.setStatusCode(statusCode);
+                ctx.setResponseBody(body);
+
+                boolean httpOk = statusCode >= 200 && statusCode < 400;
+                if (httpOk) {
+                    fireHttpSuccess();
+                    evaluateBusiness(body);
+                } else {
+                    fireHttpFail(statusCode, "HTTP " + statusCode + ": " + body, null);
+                }
+
+                return body;
+
+            } catch (Exception e) {
+                int code = 0;
+                if (conn != null) {
+                    try {
+                        code = conn.getResponseCode();
+                    } catch (Exception ignored) {
+                    }
+                }
+                ctx.setStatusCode(code);
+                fireHttpFail(code, e.getMessage(), e);
+                return "";
+            } finally {
+                if (conn != null) {
+                    conn.disconnect();
+                }
+                Http4j.contextHolder.remove();
             }
-            fireHttpFail(code, e.getMessage(), e);
-            return "";
         } finally {
-            if (conn != null) {
-                conn.disconnect();
-            }
+            Http4j.contextHolder.remove();
         }
     }
 
     // ---- internal ----
-
     private void evaluateBusiness(String body) {
         if (rule == null) {
             return;
@@ -296,4 +339,19 @@ public class Http4jRequest {
         }
     }
 
+    /**
+     * Returns {@code true} if the observer's class declares the given method
+     * (i.e. the method was overridden in a subclass).
+     */
+    private static boolean isOverridden(ResultObserver observer, String methodName, Class<?>... paramTypes) {
+        Class<?> clazz = observer.getClass();
+        if (clazz == ResultObserver.class) {
+            return false;
+        }
+        try {
+            return clazz.getMethod(methodName, paramTypes).getDeclaringClass() != ResultObserver.class;
+        } catch (NoSuchMethodException e) {
+            return false;
+        }
+    }
 }

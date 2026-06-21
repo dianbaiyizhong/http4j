@@ -116,13 +116,16 @@ public class Http4jTest {
         Http4jConfig cfg = new Http4jConfig();
         cfg.setDefaultObserver(new ResultObserver() {
             @Override
-            public void callHttpStart() { events.add("global"); }
+            public void callHttpStart() {
+                events.add("global");
+            }
         });
         Http4j.setGlobalConfig(cfg);
 
         // Plain observer (no overrides) → wraps global
         Http4j.request("http://localhost:9999/wrap")
-                .observe(new ResultObserver())
+                .observe(new ResultObserver() {
+                })
                 .executeForData();
 
         // callHttpStart fires before the connection attempt, so it should be recorded
@@ -136,13 +139,15 @@ public class Http4jTest {
         Http4jConfig cfg = new Http4jConfig();
         cfg.setDefaultObserver(new ResultObserver() {
             @Override
-            public void callHttpStart() { events.add("global"); }
+            public void callHttpStart() {
+                events.add("global");
+            }
 
             @Override
             public void callHttpFail(int statusCode, String message, Throwable throwable) {
-                super.callHttpFail(statusCode, message, throwable);
+                System.out.println(throwable);
+                throwable.printStackTrace();
 
-                System.out.println("=====");
             }
         });
         Http4j.setGlobalConfig(cfg);
@@ -151,19 +156,19 @@ public class Http4jTest {
         Http4j.request("http://localhost:9999/chain")
                 .observe(new ResultObserver() {
                     @Override
-                    public void callHttpStart() { events.add("local"); }
-
+                    public void callHttpStart() {
+                        events.add("local");
+                    }
 
                     @Override
                     public void callHttpFail(int statusCode, String message, Throwable throwable) {
-                        super.callHttpFail(statusCode, message, throwable);
-                        System.out.println("wwwwwww");
+                        System.out.println("www");
                     }
                 })
                 .executeForData();
 
-        // Both fire: global first, then local
-        assertEquals(Arrays.asList("global", "local"), events);
+        // Local overrides callHttpStart → global does NOT fire for that method
+        assertEquals(Collections.singletonList("local"), events);
     }
 
     @Test
@@ -214,7 +219,8 @@ public class Http4jTest {
         Http4jConfig cfg = new Http4jConfig();
         cfg.setConnectTimeout(3000);
         cfg.setReadTimeout(7000);
-        cfg.setDefaultObserver(new ResultObserver());
+        cfg.setDefaultObserver(new ResultObserver() {
+        });
         cfg.setDefaultRule(new DefaultResultRule());
 
         Http4j.setGlobalConfig(cfg);
