@@ -111,7 +111,7 @@ public class Http4jRequest {
             boolean overriddenHttpSucc = isOverridden(local, "callHttpSuccess");
             boolean overriddenHttpFail = isOverridden(local, "callHttpFail", int.class, String.class, Throwable.class);
             boolean overriddenBizSucc = isOverridden(local, "callBusinessSuccess");
-            boolean overriddenBizFail = isOverridden(local, "callBusinessFail", int.class, String.class);
+            boolean overriddenBizFail = isOverridden(local, "callBusinessFail");
 
             this.observer = new ResultObserver() {
                 @Override
@@ -139,9 +139,9 @@ public class Http4jRequest {
                 }
 
                 @Override
-                public void callBusinessFail(int code, String message) {
-                    if (overriddenBizFail) local.callBusinessFail(code, message);
-                    else global.callBusinessFail(code, message);
+                public boolean callBusinessFail() {
+                    if (overriddenBizFail) return local.callBusinessFail();
+                    else return global.callBusinessFail();
                 }
             };
         } else {
@@ -282,7 +282,7 @@ public class Http4jRequest {
                 }
                 ctx.setStatusCode(code);
                 fireHttpFail(code, e.getMessage(), e);
-                return "";
+                return null;
             } finally {
                 if (conn != null) {
                     conn.disconnect();
@@ -326,7 +326,7 @@ public class Http4jRequest {
         } else {
             int code = rule.getBusinessCode(body);
             String msg = rule.getBusinessMessage(body);
-            fireBusinessFail(code, msg);
+            fireBusinessFail();
         }
     }
 
@@ -371,10 +371,11 @@ public class Http4jRequest {
         }
     }
 
-    private void fireBusinessFail(int code, String message) {
+    private boolean fireBusinessFail() {
         if (observer != null) {
-            observer.callBusinessFail(code, message);
+            return observer.callBusinessFail();
         }
+        return true;
     }
 
     /**

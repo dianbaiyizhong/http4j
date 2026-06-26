@@ -20,4 +20,14 @@ public class JunitTest {
 
         System.out.println(body);
     }
+
+
+    @Test
+    public void test_http_fali() {
+        String body = Http4j.request("/api/users")
+                .setBaseUrl("http://localhost:8001")  // 故意写错地址，报错
+                .execute();
+    }
+
+
 }

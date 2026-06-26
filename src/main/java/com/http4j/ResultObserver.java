@@ -3,9 +3,9 @@ package com.http4j;
 /**
  * Lifecycle observer for a single HTTP request.
  * <p>
- * Implement (or use an anonymous class) to receive callbacks during request
- * execution. Every method is a {@code default} no-op, so you only override the
- * ones you care about.
+ * Extend this class to receive callbacks during request execution.
+ * Every method has a default no-op implementation, so you only override
+ * the ones you care about.
  * <p>
  * Inside any callback you can access the full request context via
  * {@link Http4j#currentContext()}:
@@ -22,32 +22,28 @@ package com.http4j;
  *   <li>If HTTP succeeded, the configured {@link ResultRule} is evaluated:
  *       <ul>
  *         <li>business success → {@link #callBusinessSuccess()}</li>
- *         <li>business failure → {@link #callBusinessFail(int, String)}</li>
+ *         <li>business failure → {@link #callBusinessFail()}</li>
  *       </ul>
  *   </li>
  * </ol>
- * <p>
- * <strong>Overriding vs inheriting the global default observer</strong>
- * (set via {@link Http4jConfig#setDefaultObserver(ResultObserver)}):
- * <ul>
- *   <li>If you override a method → the global default does <em>not</em> run for that method.
- *       (Use {@link #defaultObserver()} to invoke it explicitly.)</li>
- *   <li>If you do not override a method → the global default runs.</li>
- * </ul>
  *
  * @see Http4jConfig#setDefaultObserver(ResultObserver)
  * @see Http4jRequest#observe(ResultObserver)
  * @see Http4j#currentContext()
  * @see Http4jContext
  */
-public interface ResultObserver {
+public abstract class ResultObserver {
 
-    /** Called immediately before the HTTP connection is opened. */
-    default void callHttpStart() {
+    /**
+     * Called immediately before the HTTP connection is opened.
+     */
+    public void callHttpStart() {
     }
 
-    /** Called after a successful HTTP response (any 2xx / 3xx status). */
-    default void callHttpSuccess() {
+    /**
+     * Called after a successful HTTP response (any 2xx / 3xx status).
+     */
+    public void callHttpSuccess() {
     }
 
     /**
@@ -58,24 +54,29 @@ public interface ResultObserver {
      * @param throwable  the original exception, or {@code null} if the failure is an HTTP-level
      *                   error (non-2xx/3xx status) rather than a transport exception
      */
-    default void callHttpFail(int statusCode, String message, Throwable throwable) {
+    public void callHttpFail(int statusCode, String message, Throwable throwable) {
+        throw new RuntimeException("HTTP request failed: ", throwable);
     }
 
     /**
-     * Called when the HTTP response is received and the {@link ResultRule} judges it a
-     * business success (e.g. JSON {@code code == 0}).
-     */
-    default void callBusinessSuccess() {
-    }
-
-    /**
-     * Called when the HTTP response is received but the {@link ResultRule} judges it a
-     * business failure.
+     * Called to determine whether the response is a business success.
+     * <p>
+     * Return {@code true} to indicate a business success. The default implementation
+     * checks for {@code "code":0} in the response body (via {@link Http4j#currentContext()}).
      *
-     * @param code    business error code from the response
-     * @param message business error message from the response
      */
-    default void callBusinessFail(int code, String message) {
+    public void callBusinessSuccess() {
+    }
+
+    /**
+     * Called when {@link #callBusinessSuccess()} returned {@code false}.
+     * <p>
+     * Return {@code true} to indicate a business failure.
+     *
+     * @return {@code true} if this is a business failure
+     */
+    public boolean callBusinessFail() {
+        return true;
     }
 
     /**
@@ -85,12 +86,12 @@ public interface ResultObserver {
      * Call this from an overridden callback to explicitly invoke the global
      * default behaviour:
      * <pre>{@code
-     * ResultObserver.super.defaultObserver().callBusinessFail(code, msg);
+     * super.defaultObserver().callBusinessFail(code, msg);
      * }</pre>
      *
      * @return the default observer, or {@code null} if none was set
      */
-    default ResultObserver defaultObserver() {
+    public ResultObserver defaultObserver() {
         return ResultObserverHelper.getParent(this);
     }
 }
