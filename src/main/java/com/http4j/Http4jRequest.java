@@ -361,7 +361,7 @@ public class Http4jRequest {
         if (observer != null) {
             observer.callHttpFail(code, message, throwable);
         } else {
-            throw new RuntimeException(throwable);
+            throw new Http4jException(throwable);
         }
     }
 
@@ -414,7 +414,7 @@ public class Http4jRequest {
             conn.setSSLSocketFactory(sc.getSocketFactory());
             conn.setHostnameVerifier((hostname, session) -> true);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to configure SSL", e);
+            throw new Http4jException("Failed to configure SSL", e);
         }
     }
 }

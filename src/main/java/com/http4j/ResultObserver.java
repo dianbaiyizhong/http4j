@@ -55,7 +55,7 @@ public abstract class ResultObserver {
      *                   error (non-2xx/3xx status) rather than a transport exception
      */
     public void callHttpFail(int statusCode, String message, Throwable throwable) {
-        throw new RuntimeException("HTTP request failed: ", throwable);
+        throw new Http4jException("HTTP request failed: ", throwable);
     }
 
     /**
