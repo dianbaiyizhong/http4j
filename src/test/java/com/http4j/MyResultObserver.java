@@ -8,11 +8,7 @@ public class MyResultObserver extends ResultObserver {
         System.out.println("=====parent callHttpStart");
     }
 
-    @Override
-    public void callHttpSuccess() {
-    }
 
-    @Override
-    public void callBusinessSuccess() {
-    }
+
+
 }

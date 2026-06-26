@@ -73,10 +73,8 @@ public abstract class ResultObserver {
      * <p>
      * Return {@code true} to indicate a business failure.
      *
-     * @return {@code true} if this is a business failure
      */
-    public boolean callBusinessFail() {
-        return true;
+    public void callBusinessFail() {
     }
 
     /**

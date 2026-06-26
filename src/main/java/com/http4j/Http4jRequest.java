@@ -80,23 +80,7 @@ public class Http4jRequest {
         return this;
     }
 
-    /**
-     * Attach a per-request observer.
-     * <p>
-     * For each lifecycle callback the library checks whether the local observer
-     * overrides that method:
-     * <ul>
-     *   <li><strong>overridden</strong> → only the local callback runs
-     *       (the global default does <em>not</em> run automatically)</li>
-     *   <li><strong>not overridden</strong> → the global default callback runs</li>
-     * </ul>
-     * <p>
-     * If you want to opt in to the global default behaviour inside an overridden
-     * method, call {@link #defaultObserver()} explicitly:
-     * <pre>{@code
-     * defaultObserver().callHttpFail(code, msg, ex);
-     * }</pre>
-     */
+
     public Http4jRequest observe(ResultObserver observer) {
         if (observer == null) {
             return this;
@@ -139,9 +123,9 @@ public class Http4jRequest {
                 }
 
                 @Override
-                public boolean callBusinessFail() {
-                    if (overriddenBizFail) return local.callBusinessFail();
-                    else return global.callBusinessFail();
+                public void callBusinessFail() {
+                    if (overriddenBizFail) local.callBusinessFail();
+                    else global.callBusinessFail();
                 }
             };
         } else {
@@ -371,11 +355,10 @@ public class Http4jRequest {
         }
     }
 
-    private boolean fireBusinessFail() {
+    private void fireBusinessFail() {
         if (observer != null) {
-            return observer.callBusinessFail();
+            observer.callBusinessFail();
         }
-        return true;
     }
 
     /**
