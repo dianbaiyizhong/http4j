@@ -123,9 +123,9 @@ public class Http4jRequest {
                 }
 
                 @Override
-                public void callBusinessFail() {
-                    if (overriddenBizFail) local.callBusinessFail();
-                    else global.callBusinessFail();
+                public void callBusinessFail(String message) {
+                    if (overriddenBizFail) local.callBusinessFail(message);
+                    else global.callBusinessFail(message);
                 }
             };
         } else {
@@ -308,8 +308,7 @@ public class Http4jRequest {
             fireBusinessSuccess();
             Http4j.currentContext().setBusinessData(rule.getBusinessData(body));
         } else {
-            int code = rule.getBusinessCode(body);
-            String msg = rule.getBusinessMessage(body);
+            Http4j.currentContext().setBusinessMessage(rule.getBusinessMessage(body));
             fireBusinessFail();
         }
     }
@@ -357,7 +356,7 @@ public class Http4jRequest {
 
     private void fireBusinessFail() {
         if (observer != null) {
-            observer.callBusinessFail();
+            observer.callBusinessFail(Http4j.currentContext().getBusinessMessage());
         }
     }
 

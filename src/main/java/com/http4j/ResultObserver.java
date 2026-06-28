@@ -74,7 +74,7 @@ public abstract class ResultObserver {
      * Return {@code true} to indicate a business failure.
      *
      */
-    public void callBusinessFail() {
+    public void callBusinessFail(String message) {
     }
 
     /**

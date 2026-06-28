@@ -31,6 +31,7 @@ public interface ResultRule {
         return "";
     }
 
+
     /**
      * Extract the business data payload from the full response body.
      * <p>

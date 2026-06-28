@@ -19,4 +19,6 @@ public class MyRule implements ResultRule {
     public String getBusinessData(String body) {
         return jsonObject.getString("data");
     }
+
+
 }
